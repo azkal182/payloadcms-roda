@@ -34,8 +34,13 @@ jobs:
           DATABASE_URL: 'postgres://azkal:azkal@139.59.227.23:5432/payloadcms-roda'
           PAYLOAD_SECRET: '1dbb4f2c4449f60a91e95202'
           NEXT_PUBLIC_SERVER_URL: 'https://roda.azkal.my.id'
-          CRON_SECRET: 'sadsfhjsd-sdfsf879jhkjLNKNKJKK'
-        run: bun run build
+          CRON_SECRET: 'sasfhjsd-sdfsf879jhkjLNKNKJKK'
+        run: |
+          echo "DATABASE_URL=${DATABASE_URL}"
+          echo "PAYLOAD_SECRET=${PAYLOAD_SECRET}"
+          echo "NEXT_PUBLIC_SERVER_URL=${NEXT_PUBLIC_SERVER_URL}"
+          echo "CRON_SECRET=${CRON_SECRET}"
+          bun run build
 
       - name: Add SSH key
         uses: webfactory/ssh-agent@v0.9.0
