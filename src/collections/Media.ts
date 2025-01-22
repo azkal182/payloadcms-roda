@@ -14,6 +14,13 @@ import { authenticated } from '../access/authenticated'
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
 
+const rootDir = process.cwd()
+
+console.log({
+  dirname,
+  rootDir,
+})
+
 export const Media: CollectionConfig = {
   slug: 'media',
   access: {
