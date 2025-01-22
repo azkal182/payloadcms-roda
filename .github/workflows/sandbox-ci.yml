@@ -1,0 +1,109 @@
+name: CI/CD Next.js with Prisma
+
+on:
+  push:
+    branches:
+      - sandbox
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Print current branch
+        run: echo ${{ github.ref }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20.x'
+
+      - name: Install dependencies
+        run: yarn install
+
+      - name: Print DATABASE_URL
+        run: echo ${{ secrets.DATABASE_URL }}
+
+      - name: Run Prisma Migrations
+        env:
+          DATABASE_URL: 'mysql://alan:alan@165.22.106.176:3306/backoffice'
+        run: npx prisma migrate deploy || sleep 10 && npx prisma migrate deploy
+
+      - name: Build Next.js application
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PAYLOAD_SECRET: ${{ secrets.PAYLOAD_SECRET }}
+          NEXT_PUBLIC_SERVER_URL: ${{ secrets.NEXT_PUBLIC_SERVER_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: yarn build
+
+      - name: Add SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Add server to known_hosts
+        run: ssh-keyscan 165.22.106.176 >> ~/.ssh/known_hosts
+
+      - name: Deploy to VPS
+        run: |
+          ssh -tt azkal@165.22.106.176 << 'EOF'
+              # Verifikasi apakah direktori /home/azkal/project/backoffice ada
+              if [ ! -d "/home/azkal/project/payloadcms-roda" ]; then
+              echo "Directory /home/azkal/project/payloadcms-roda does not exist. Cloning project..."
+              git clone https://github.com/azkal182/payloadcms-roda.git /home/azkal/project/backoffice
+              cd /home/azkal/project/payloadcms-roda
+              git checkout sandbox
+              else
+              echo "Directory /home/azkal/project/payloadcms-roda exists. Pulling latest changes..."
+              cd /home/azkal/project/payloadcms-roda
+              git checkout sandbox
+              git pull origin sandbox
+              fi
+              exit
+          EOF
+
+      - name: Copy build files to VPS
+        run: |
+          rsync -avz --delete .next/ azkal@165.22.106.176:/home/azkal/project/payloadcms-roda/.next/
+          rsync -avz --delete public/ azkal@165.22.106.176:/home/azkal/project/payloadcms-roda/public/
+          rsync -avz --delete package.json yarn.lock azkal@165.22.106.176:/home/azkal/project/payloadcms-roda/
+
+      - name: Install Dependencies and Restart App
+        run: |
+          ssh -tt azkal@165.22.106.176 << 'EOF'
+              # Masuk ke direktori project
+              cd /home/azkal/project/payloadcms-roda
+
+              # Hentikan aplikasi yang berjalan (jika menggunakan PM2)
+              if pm2 describe payloadcms-roda > /dev/null; then
+              pm2 stop payloadcms-roda
+              pm2 delete payloadcms-roda
+              else
+              echo "PM2 application 'payloadcms-roda' not found, skipping stop."
+              fi
+
+              # Install dependencies tanpa build
+              yarn install --production
+
+              # Update variabel di file .env
+              sed -i '/^DATABASE_URL=/d' .env
+              echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" >> .env
+
+              sed -i '/^EDGE_STORE_ACCESS_KEY=/d' .env
+              echo "PAYLOAD_SECRET=${{ secrets.PAYLOAD_SECRET }}" >> .env
+
+              sed -i '/^EDGE_STORE_SECRET_KEY=/d' .env
+              echo "NEXT_PUBLIC_SERVER_URL=${{ secrets.NEXT_PUBLIC_SERVER_URL }}" >> .env
+
+              sed -i '/^AUTH_SECRET=/d' .env
+              echo "CRON_SECRET=${{ secrets.CRON_SECRET }}" >> .env
+
+              # Restart aplikasi dengan PM2 tanpa build
+              pm2 start npm --name "payloadcms-roda" -- start -- -p 5000
+
+              # Keluar dari SSH
+              exit
+          EOF
