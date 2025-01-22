@@ -62,7 +62,8 @@ export default buildConfig({
   editor: defaultLexical,
   db: postgresAdapter({
     pool: {
-      connectionString: process.env.DATABASE_URI || '',
+      connectionString:
+        process.env.DATABASE_URI || 'postgres://azkal:azkal@139.59.227.23:5432/payloadcms-roda',
     },
   }),
   collections: [Pages, Products, Posts, Media, Categories, Users],
