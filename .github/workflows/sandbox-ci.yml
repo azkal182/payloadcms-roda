@@ -31,10 +31,10 @@ jobs:
 
       - name: Build Next.js application
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          PAYLOAD_SECRET: ${{ secrets.PAYLOAD_SECRET }}
-          NEXT_PUBLIC_SERVER_URL: ${{ secrets.NEXT_PUBLIC_SERVER_URL }}
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          DATABASE_URL: 'postgres://azkal:azkal@139.59.227.23:5432/payloadcms-roda'
+          PAYLOAD_SECRET: '1dbb4f2c4449f60a91e95202'
+          NEXT_PUBLIC_SERVER_URL: 'https://roda.azkal.my.id'
+          CRON_SECRET: 'sadsfhjsd-sdfsf879jhkjLNKNKJKK'
         run: bun run build
 
       - name: Add SSH key
