@@ -29,14 +29,6 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Print DATABASE_URL
-        run: echo ${{ secrets.DATABASE_URL }}
-
-      - name: Run Prisma Migrations
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: npx prisma migrate deploy || sleep 10 && npx prisma migrate deploy
-
       - name: Build Next.js application
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
